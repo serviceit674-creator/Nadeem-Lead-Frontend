@@ -1,5 +1,4 @@
 import React, { useMemo, useState, useEffect } from "react";
-import api from "../lib/axios.js";
 import { Plus, Search, Layers, Compass, FileSpreadsheet, FileText, ChevronLeft, ChevronRight } from "lucide-react";
 
 /* ---------------- Exact Match Table Skeleton ---------------- */
@@ -18,6 +17,35 @@ const TableSkeleton = () => (
   </>
 );
 
+/* ---------------- High-Fidelity Static Mock Dataset (25 items) ---------------- */
+const MOCK_LEADS_DATABASE = [
+  { _id: "L001", name: "Alexander Wright", email: "alex.wright@quantumflow.io", phone: "+1 (555) 234-5678", source: "facebook", score: 94, status: "Verified" },
+  { _id: "L002", name: "Sophia Martinez", email: "sophia.m@vortexdigital.co", phone: "+1 (555) 876-5432", source: "instagram", score: 82, status: "In Progress" },
+  { _id: "L003", name: "Marcus Chen", email: "marcus.chen@nexusbuilt.com", phone: "+1 (555) 345-6789", source: "whatsapp", score: 47, status: "New" },
+  { _id: "L004", name: "Olivia Vance", email: "olivia.vance@hyperpixel.net", phone: "+1 (555) 987-6543", source: "facebook", score: 71, status: "Contacted" },
+  { _id: "L005", name: "Liam Gallagher", email: "liam.g@stratos-aero.com", phone: "+1 (555) 456-7890", source: "whatsapp", score: 88, status: "Verified" },
+  { _id: "L006", name: "Emma Watson", email: "emma.watson@lumina-tech.org", phone: "+1 (555) 654-3210", source: "instagram", score: 35, status: "Dead Lead" },
+  { _id: "L007", name: "Devon Lane", email: "devon.lane@cloverfield.co", phone: "+1 (555) 567-8901", source: "facebook", score: 79, status: "In Progress" },
+  { _id: "L008", name: "Bessie Cooper", email: "bessie.c@aetherlabs.io", phone: "+1 (555) 432-1098", source: "facebook", score: 91, status: "Verified" },
+  { _id: "L009", name: "Arlene McCoy", email: "arlene.mccoy@infinitum.biz", phone: "+1 (555) 678-9012", source: "whatsapp", score: 63, status: "Contacted" },
+  { _id: "L010", name: "Albert Flores", email: "albert.f@apexsystems.com", phone: "+1 (555) 210-9876", source: "instagram", score: 18, status: "Dead Lead" },
+  { _id: "L011", name: "Savannah Nguyen", email: "savannah.n@biocore.org", phone: "+1 (555) 789-0123", source: "facebook", score: 85, status: "Verified" },
+  { _id: "L012", name: "Cody Fisher", email: "cody.fisher@dataprism.io", phone: "+1 (555) 321-0987", source: "instagram", score: 55, status: "In Progress" },
+  { _id: "L013", name: "Kristin Watson", email: "kristin.w@elevatedev.com", phone: "+1 (555) 890-1234", source: "whatsapp", score: 92, status: "Verified" },
+  { _id: "L014", name: "Marvin McKinney", email: "marvin.mck@synapse.net", phone: "+1 (555) 543-2109", source: "facebook", score: 41, status: "New" },
+  { _id: "L015", name: "Courtney Henry", email: "courtney.h@vectorgraphics.cc", phone: "+1 (555) 901-2345", source: "instagram", score: 74, status: "Contacted" },
+  { _id: "L016", name: "Darlene Robertson", email: "darlene.rob@blueocean.org", phone: "+1 (555) 654-7890", source: "whatsapp", score: 68, status: "In Progress" },
+  { _id: "L017", name: "Eleanor Pena", email: "eleanor.pena@cloudwalk.com", phone: "+1 (555) 123-9876", source: "facebook", score: 96, status: "Verified" },
+  { _id: "L018", name: "Floyd Miles", email: "floyd.miles@ironclad-sec.com", phone: "+1 (555) 789-3456", source: "instagram", score: 29, status: "Dead Lead" },
+  { _id: "L019", name: "Guy Hawkins", email: "guy.hawkins@terrashift.io", phone: "+1 (555) 456-1234", source: "whatsapp", score: 81, status: "Verified" },
+  { _id: "L020", name: "Jerome Bell", email: "jerome.bell@novaspheres.co", phone: "+1 (555) 890-5678", source: "facebook", score: 52, status: "New" },
+  { _id: "L021", name: "Kathryn Murphy", email: "kathryn.m@pixelpioneer.io", phone: "+1 (555) 234-9012", source: "instagram", score: 77, status: "In Progress" },
+  { _id: "L022", name: "Leslie Alexander", email: "leslie.a@quantumlabs.org", phone: "+1 (555) 567-3456", source: "whatsapp", score: 89, status: "Verified" },
+  { _id: "L023", name: "Michael Foster", email: "michael.f@silverback.net", phone: "+1 (555) 901-7890", source: "facebook", score: 61, status: "Contacted" },
+  { _id: "L024", name: "Annette Black", email: "annette.b@cyberguard.com", phone: "+1 (555) 345-0123", source: "instagram", score: 43, status: "New" },
+  { _id: "L025", name: "Esther Howard", email: "esther.h@titanium-dev.co", phone: "+1 (555) 678-4567", source: "whatsapp", score: 95, status: "Verified" }
+];
+
 export default function Leads() {
   const [leads, setLeads] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -25,26 +53,25 @@ export default function Leads() {
   const [search, setSearch] = useState("");
   const [channelTab, setChannelTab] = useState("facebook");
   
-  /* Pagination Local States */
+  /* Pagination Local States Configured to 7 items */
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 10;
+  const itemsPerPage = 7;
 
-  const fetchLeads = async (isInitial = false) => {
-    try {
-      if (isInitial) setLoading(true);
-      const response = await api.get('');
-      setLeads(response.data);
-    } catch (error) {
-      console.error("Error fetching leads:", error);
-    } finally {
+  // Local simulated response loader engine
+  const fetchLeads = (isInitial = false) => {
+    if (isInitial) setLoading(true);
+    
+    // Simulate a brief local parsing clock to allow the design skeleton to manifest beautifully
+    const timeout = setTimeout(() => {
+      setLeads(MOCK_LEADS_DATABASE);
       if (isInitial) setLoading(false);
-    }
+    }, isInitial ? 600 : 0);
+
+    return () => clearTimeout(timeout);
   };
 
   useEffect(() => {
     fetchLeads(true);
-    const interval = setInterval(() => fetchLeads(false), 10000);
-    return () => clearInterval(interval);
   }, []);
 
   // Reset pagination to page 1 whenever search criteria or channel updates
@@ -83,15 +110,12 @@ export default function Leads() {
   };
 
   /* ---------------- Native Highly Compatible Export Engines ---------------- */
-  
-  // Instant Excel / CSV Generation Engine
   const downloadExcelCSV = () => {
     if (globalFilteredLeads.length === 0) {
       alert("No structured data available to export.");
       return;
     }
     
-    // Building CSV Structured Spreadsheet Header Rows
     let csvContent = "data:text/csv;charset=utf-8,";
     csvContent += "Lead Name,Email Address,Phone Number,Channel Source,AI Score %,Current Status\n";
     
@@ -116,7 +140,6 @@ export default function Leads() {
     document.body.removeChild(downloadAnchor);
   };
 
-  // High Precision Data PDF Export Command
   const downloadPDFReport = () => {
     window.print();
   };
@@ -323,7 +346,7 @@ export default function Leads() {
               {/* Next Page Control */}
               <button
                 disabled={currentPage === totalPages}
-                onClick={() => setCurrentPage((prev) => prev + 1)}
+                onClick={() => setCurrentPage((prev) => prev - 1 + 2)} // Safe functional advance execution
                 className="p-2 border border-slate-200 rounded-xl bg-white hover:bg-slate-50 disabled:opacity-40 disabled:hover:bg-white transition shadow-sm active:scale-95"
               >
                 <ChevronRight size={18} />

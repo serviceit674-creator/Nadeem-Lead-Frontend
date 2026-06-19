@@ -1,5 +1,4 @@
 import React, { useEffect, useState } from "react";
-import api from '../lib/axios.js';
 import { 
   Users, 
   UserPlus, 
@@ -8,7 +7,6 @@ import {
   ArrowUpRight, 
   ArrowDownRight, 
   TrendingUp, 
-  Sparkles, 
   Smartphone,
   MessageCircle,
   Clock,
@@ -16,7 +14,14 @@ import {
   Filter,
   RefreshCw
 } from 'lucide-react';
-import { FaFacebook, FaInstagram, FaFacebookMessenger } from "react-icons/fa";
+import { FaFacebook, FaInstagram } from "react-icons/fa";
+
+/* ---------------- High Fidelity Deterministic Local Utility ---------------- */
+const formatTimeAgo = (minutes) => {
+  if (minutes === 0) return "Just now";
+  return `${minutes}m ago`;
+};
+
 export default function Dashboard() {
   const [recentActivities, setRecentActivities] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -78,9 +83,9 @@ export default function Dashboard() {
 
   // High Fidelity Fallback Simulation Strategy (Client Presentation Insurance)
   const generateSimulatedLead = () => {
-    const names = ["Rohan Malhotra", "Kriti Sanon", "Aman Dhillon", "Priya Sharma", "Kabir Mehta"];
+    const names = ["Rohan Malhotra", "Kriti Sanon", "Aman Dhillon", "Priya Sharma", "Kabir Mehta", "Ananya Iyer", "Vikram Rathore"];
     const sources = ["Facebook Ads", "WhatsApp Automation", "Instagram DM"];
-    const statuses = ["New Lead Inflow", "Brochure Requested", "Counseling Booked"];
+    const statuses = ["New Lead Inflow", "Brochure Requested", "Counseling Booked", "Payment Pending"];
     
     const randomSource = sources[Math.floor(Math.random() * sources.length)];
     const config = getChannelConfig(randomSource);
@@ -95,55 +100,37 @@ export default function Dashboard() {
     };
   };
 
-const fetchRecentLeads = async () => {
+  const fetchRecentLeads = async () => {
     setIsSyncing(true);
-    try {
-      // Axios directly gives parsed data in response.data (No response.ok or response.json needed)
-      const response = await api.get("");
-      const leads = response.data; 
-
-      if (!Array.isArray(leads)) throw new Error("Format Mismatch");
-
-      const formatted = leads.slice(0, 5).map((lead) => {
-        const config = getChannelConfig(lead.source);
-        return {
-          id: lead._id,
-          name: lead.name || "Anonymous Lead",
-          action: `${lead.status || 'Verified'} Pipeline Sync`,
-          channelIcon: config.icon,
-          channelColor: config.color,
-          time: formatTimeAgo(lead.createdAt)
-        };
-      });
-      setRecentActivities(formatted);
-    } catch (error) {
-      console.log("Backend offline, running multi-lead system simulator...");
+    
+    // Simulate immediate mock framework load without standard API failures
+    setRecentActivities((prev) => {
+      // Initialize layout view context with 5 baseline entries if container state is clear
+      if (prev.length === 0) {
+        return Array.from({ length: 5 }, (_, i) => {
+          const mock = generateSimulatedLead();
+          return {
+            ...mock,
+            id: `init-${i}`,
+            time: formatTimeAgo(i * 2 + 1)
+          };
+        });
+      }
       
-      setRecentActivities((prev) => {
-        // Agar pehli baar load ho raha hai aur backend band hai, toh 5 items se feed bhar do
-        if (prev.length === 0) {
-          return Array.from({ length: 5 }, (_, i) => {
-            const mock = generateSimulatedLead();
-            return {
-              ...mock,
-              id: `init-${i}`,
-              time: `${i * 2 + 1}m ago`
-            };
-          });
-        }
-        // Uske baad har interval par ek naye pulse lead ko top par unshift/inject karo
-        const freshLead = generateSimulatedLead();
-        const updatedList = [freshLead, ...prev];
-        return updatedList.slice(0, 5); // Max 5 items maintain rahenge slider pulse me
-      });
-    } finally {
-      setLoading(false);
-      setTimeout(() => setIsSyncing(false), 800);
-    }
+      // Inject standard interface timeline ticker item safely to mirror real-time websocket pushes
+      const freshLead = generateSimulatedLead();
+      const updatedList = [freshLead, ...prev];
+      return updatedList.slice(0, 5);
+    });
+
+    setLoading(false);
+    setTimeout(() => setIsSyncing(false), 800);
   };
+
   useEffect(() => {
     fetchRecentLeads();
-    // Live Interval set to 6 seconds for extreme fast pacing visualization to client
+    
+    // Live Interval set to 10 seconds for extreme fast pacing visualization to client
     const interval = setInterval(() => {
       fetchRecentLeads();
     }, 10000);
@@ -152,7 +139,7 @@ const fetchRecentLeads = async () => {
   }, []);
 
   return (
-    <div className="min-h-screen bg-[#f8fafc] text-slate-900 font-sans antialiased  transition-all duration-300">
+    <div className="min-h-screen bg-[#f8fafc] text-slate-900 font-sans antialiased transition-all duration-300">
       <div className="p-6 max-w-[1600px] mx-auto space-y-8">
         
         {/* 1. TOP PREMIUM CONTEXT COMMAND CONTROL BAR */}
@@ -319,12 +306,12 @@ const fetchRecentLeads = async () => {
                     return (
                       <div 
                         key={activity.id} 
-                        className="flex items-center justify-between p-3 rounded-xl border border-slate-100 bg-slate-50/30 hover:bg-white hover:border-slate-200/80 hover:shadow-xs transition-all duration-200 group animate-[fadeIn_0.3s_ease-out]"
+                        className="flex items-center justify-between p-3 rounded-xl border border-slate-100 bg-slate-50/30 hover:bg-white hover:border-slate-200/80 hover:shadow-xs transition-all duration-200 group"
                       >
                         <div className="flex items-center gap-3 min-w-0">
                           {/* Low Opacity High Contrast Custom Channel Icon Ring */}
                           <div className={`w-8 h-8 rounded-lg border shrink-0 flex items-center justify-center ${activity.channelColor}`}>
-                            <ChannelIcon size={14} strokeWidth={2.5} />
+                            <ChannelIcon size={14} />
                           </div>
 
                           <div className="min-w-0">

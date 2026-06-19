@@ -11,8 +11,8 @@ import {
   FiFilter,
   FiEye,
   FiX,
+  FiGlobe,
 } from "react-icons/fi";
-
 
 /* ---------------- Precision Date Formatter (IST Friendly) ---------------- */
 const formatLeadDate = (dateStr) => {
@@ -71,75 +71,138 @@ const TableSkeleton = () => (
   </>
 );
 
+/* ---------------- Multi-Platform Medical Ingestion Dataset ---------------- */
+const GENERATE_MOCK_LEADS = () => {
+  const sampleFirstNames = ["Rohan", "Kriti", "Aman", "Priya", "Kabir", "Ananya", "Vikram", "Sneha", "Rahul", "Divya", "Arjun", "Meera", "Yash", "Riya", "Aditya"];
+  const sampleLastNames = ["Malhotra", "Sanon", "Dhillon", "Sharma", "Mehta", "Iyer", "Rathore", "Joshi", "Verma", "Gupta", "Kapoor", "Nair", "Patel", "Reddy", "Singh"];
+  
+  // Channels where doctor receives bookings/leads from
+  const acquisitionPlatforms = [
+    "Practo Health",
+    "Apollo 24/7",
+    "Tata 1mg Portal",
+    "Personal Website",
+    "Google My Business",
+    "Justdial Medical"
+  ];
+  
+  const cities = ["New Delhi", "Mumbai", "Bangalore", "Hyderabad", "Pune", "Chennai", "Noida", "Gurugram"];
+  const states = ["Delhi NCR", "Maharashtra", "Karnataka", "Telangana", "Maharashtra", "Tamil Nadu", "Uttar Pradesh", "Haryana"];
+  const urgencyTiers = ["Routine Case", "Urgent Review", "Follow-up", "Immediate Priority"];
+  
+  const medicalCases = [
+    { cond: "Chronic Hypertension", msg: "Patient requested urgent callback via Practo regarding sudden medication side effects and recurring morning dizziness." },
+    { cond: "Type 2 Diabetes Control", msg: "Uploaded latest fasting report on 1mg. HbA1c is 8.4. Needs optimization adjustments for insulin dosage." },
+    { cond: "Severe Migraine Cluster", msg: "Web inquiry: Experiencing acute unilateral throbbing head pain along with light sensitivity for 3 continuous days." },
+    { cond: "Post-Op Knee Follow-up", msg: "Apollo lead: Mild post-surgery swelling in the left knee. Requesting an evening video consultation appointment slot." },
+    { cond: "Acute Acid Reflux", msg: "Google Business: Continuous chest burning sensation post-meals. General antacids are completely failing to give relief." },
+    { cond: "Pediatric Asthma Triage", msg: "Justdial lead: 6-year-old child exhibiting wheezing patterns due to sudden weather transitions. Requires a nebulizer schedule." }
+  ];
+
+  return Array.from({ length: 45 }, (_, index) => {
+    const locIndex = Math.floor(Math.random() * cities.length);
+    const gender = Math.random() > 0.45 ? "Male" : "Female";
+    const firstName = sampleFirstNames[Math.floor(Math.random() * sampleFirstNames.length)];
+    const lastName = sampleLastNames[Math.floor(Math.random() * sampleLastNames.length)];
+    const fullName = `${firstName} ${lastName}`;
+    const email = `${firstName.toLowerCase()}.${lastName.toLowerCase()}${index + 10}@healthmail.com`;
+    
+    const medicalCase = medicalCases[index % medicalCases.length];
+    const platform = acquisitionPlatforms[index % acquisitionPlatforms.length];
+
+    return {
+      "._id": `case_id_${3000 + index}`,
+      fullName,
+      email,
+      mobileNumber: `+91 ${Math.floor(6000000000 + Math.random() * 3999999999)}`,
+      interestedCourse: medicalCase.cond, // Condition
+      course: "",
+      city: cities[locIndex],
+      state: states[locIndex],
+      gender,
+      fatherName: `Platform: ${platform}`, // Embedded Source Platform metadata securely
+      dateOfBirth: new Date(1960 + Math.floor(Math.random() * 55), Math.floor(Math.random() * 12), Math.floor(Math.random() * 28)).toISOString(),
+      preferredLanguage: Math.random() > 0.3 ? "English" : "Hindi",
+      qualification: platform, // Reused safely for table routing filters
+      stream: urgencyTiers[Math.floor(Math.random() * urgencyTiers.length)], // Urgency Level mapping
+      twelfthPercentage: Math.floor(22 + Math.random() * 65), // Patient Age
+      message: medicalCase.msg,
+      createdAt: new Date(Date.now() - index * 45 * 60000).toISOString()
+    };
+  });
+};
+
 /* ---------------- Main Page ---------------- */
 const LeadsPage = () => {
-  const [leads, setLeads] = useState([]);
+  const [masterLeads, setMasterLeads] = useState([]);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
   const [limit] = useState(10);
-  const [total, setTotal] = useState(0);
   const [search, setSearch] = useState("");
 
   const [deleteModal, setDeleteModal] = useState({ open: false, id: "", name: "" });
   const [deleting, setDeleting] = useState(false);
   const [selectedLead, setSelectedLead] = useState(null);
 
-  const API_BASE_URL = "https://vidya-udbhav-backend.vercel.app/api/leads";
-
-  const fetchLeads = async () => {
-    try {
-      setLoading(true);
-      const res = await fetch(`${API_BASE_URL}?page=${page}&limit=${limit}`);
-      
-      if (!res.ok) throw new Error("Failed to fetch leads from server");
-
-      const result = await res.json();
-      const fetchedLeads = result.data?.leads || result.leads || [];
-      const fetchedTotal = result.data?.total ?? result.total ?? 0;
-
-      setLeads(fetchedLeads);
-      setTotal(fetchedTotal);
-    } catch (err) {
-      toast.error(err.message || "Failed to load leads");
-    } finally {
+  useEffect(() => {
+    const data = GENERATE_MOCK_LEADS();
+    setMasterLeads(data);
+    
+    const timer = setTimeout(() => {
       setLoading(false);
-    }
+    }, 600);
+    
+    return () => clearTimeout(timer);
+  }, []);
+
+  const handleSearchChange = (e) => {
+    setSearch(e.target.value);
+    setPage(1);
   };
 
-  useEffect(() => {
-    fetchLeads();
-  }, [page]);
-
-  const filteredLeads = useMemo(() => {
-    if (!search) return leads;
+  const searchedAllLeads = useMemo(() => {
+    if (!search) return masterLeads;
     const keyword = search.toLowerCase();
-    return leads.filter(
+    return masterLeads.filter(
       (l) =>
         (l.fullName || "").toLowerCase().includes(keyword) ||
         (l.email || "").toLowerCase().includes(keyword) ||
-        (l.mobileNumber || "").includes(keyword) ||
-        (l.course || "").toLowerCase().includes(keyword) ||
-        (l.interestedCourse || "").toLowerCase().includes(keyword)
+        (l.interestedCourse || "").toLowerCase().includes(keyword) ||
+        (l.qualification || "").toLowerCase().includes(keyword) || // Platform search matching
+        (l.stream || "").toLowerCase().includes(keyword) // Urgency search matching
     );
-  }, [search, leads]);
+  }, [search, masterLeads]);
 
+  const paginatedLeads = useMemo(() => {
+    const startIndex = (page - 1) * limit;
+    return searchedAllLeads.slice(startIndex, startIndex + limit);
+  }, [searchedAllLeads, page, limit]);
+
+  const total = searchedAllLeads.length;
   const totalPages = Math.ceil(total / limit);
 
-  const confirmDelete = async () => {
-    try {
-      setDeleting(true);
-      const res = await fetch(`${API_BASE_URL}/${deleteModal.id}`, { method: "DELETE" });
-
-      if (!res.ok) throw new Error("Failed to delete lead");
-
-      toast.success("Lead deleted successfully");
-      setLeads((prev) => prev.filter((l) => l._id !== deleteModal.id));
+  const confirmDelete = () => {
+    setDeleting(true);
+    setTimeout(() => {
+      setMasterLeads((prev) => prev.filter((l) => l._id !== deleteModal.id));
       setDeleteModal({ open: false, id: "", name: "" });
-    } catch (err) {
-      toast.error(err.message || "Delete failed");
-    } finally {
       setDeleting(false);
-    }
+      
+      const updatedTotal = total - 1;
+      const updatedMaxPages = Math.ceil(updatedTotal / limit) || 1;
+      if (page > updatedMaxPages) {
+        setPage(updatedMaxPages);
+      }
+    }, 400);
+  };
+
+  // Small badge helper for identifying platform channels instantly
+  const getPlatformBadgeStyle = (platform) => {
+    if (platform.includes("Practo")) return "bg-teal-50 text-teal-700 border-teal-100";
+    if (platform.includes("Apollo")) return "bg-orange-50 text-orange-700 border-orange-100";
+    if (platform.includes("1mg")) return "bg-red-50 text-red-700 border-red-100";
+    if (platform.includes("Website")) return "bg-blue-50 text-blue-700 border-blue-100";
+    return "bg-slate-100 text-slate-700 border-slate-200";
   };
 
   return (
@@ -153,31 +216,31 @@ const LeadsPage = () => {
           <FiChevronLeft size={18} /> Back
         </button>
         <div className="flex items-center gap-2 text-xs font-bold text-gray-400 uppercase tracking-wider">
-          <FiCalendar /> Sync Local: {new Date().toLocaleDateString('en-GB')}
+          <FiGlobe /> Multi-Channel Sync Active
         </div>
       </div>
 
-      {/* Stats Summary Bar - Perfectly Sized */}
+      {/* Stats Summary Bar */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
         <div className="bg-white p-5 rounded-2xl border border-gray-100 flex items-center gap-4 shadow-sm">
-          <div className="p-3.5 bg-blue-50 text-blue-600 rounded-xl"><FiUsers size={22}/></div>
+          <div className="p-3.5 bg-rose-50 text-rose-600 rounded-xl"><FiUsers size={22}/></div>
           <div>
-            <p className="text-xs text-gray-500 font-semibold uppercase tracking-wider">Total Active Leads</p>
-            <h3 className="text-2xl font-black text-gray-900 mt-0.5">{total}</h3>
+            <p className="text-xs text-gray-500 font-semibold uppercase tracking-wider">Total Aggregated Patients</p>
+            <h3 className="text-2xl font-black text-gray-900 mt-0.5">{masterLeads.length}</h3>
           </div>
         </div>
         <div className="bg-white p-5 rounded-2xl border border-gray-100 flex items-center gap-4 shadow-sm">
           <div className="p-3.5 bg-green-50 text-green-600 rounded-xl"><FiFilter size={22}/></div>
           <div>
-            <p className="text-xs text-gray-500 font-semibold uppercase tracking-wider">Filtered Results</p>
-            <h3 className="text-2xl font-black text-gray-900 mt-0.5">{filteredLeads.length}</h3>
+            <p className="text-xs text-gray-500 font-semibold uppercase tracking-wider">Filtered Channels</p>
+            <h3 className="text-2xl font-black text-gray-900 mt-0.5">{total}</h3>
           </div>
         </div>
-        <div className="bg-indigo-600 p-5 rounded-2xl text-white flex items-center gap-4 shadow-md">
+        <div className="bg-blue-600 p-5 rounded-2xl text-white flex items-center gap-4 shadow-md">
            <div className="p-3.5 bg-white/10 rounded-xl"><FiCalendar size={22}/></div>
            <div>
-             <p className="text-xs text-indigo-100 font-semibold uppercase tracking-wider">Current Page</p>
-             <h3 className="text-2xl font-black mt-0.5">{page} / {totalPages || 1}</h3>
+             <p className="text-xs text-blue-100 font-semibold uppercase tracking-wider">Live Intake Dashboard</p>
+             <h3 className="text-2xl font-black mt-0.5">Page {page} / {totalPages || 1}</h3>
            </div>
         </div>
       </div>
@@ -185,32 +248,32 @@ const LeadsPage = () => {
       {/* Header & Search Bar */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-white p-5 rounded-2xl border border-gray-100 shadow-sm">
         <div>
-          <h1 className="text-2xl font-black text-gray-900 tracking-tight">Leads Engine</h1>
-          <p className="text-sm text-gray-500 mt-0.5">Manage real-time student inquiries instantly</p>
+          <h1 className="text-2xl font-black text-gray-900 tracking-tight">Omni-Channel Lead Hub</h1>
+          <p className="text-sm text-gray-500 mt-0.5">Centralized patient acquisition across networks, portals, and direct bookings</p>
         </div>
         <div className="relative w-full md:w-96 group">
           <FiSearch className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-blue-500 transition-colors" size={18} />
           <input
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search by name, email, course..."
+            onChange={handleSearchChange}
+            placeholder="Search platform, ailment, patient name..."
             className="pl-12 pr-4 py-2.5 w-full bg-gray-50 border border-transparent focus:border-blue-500 focus:bg-white rounded-xl outline-none text-sm transition-all shadow-inner"
           />
         </div>
       </div>
 
-      {/* High-Readability Table Container */}
+      {/* High-Readability Omnichannel Table Container */}
       <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse table-auto">
             <thead>
               <tr className="bg-gray-50/80 border-b border-gray-200">
-                <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-gray-500">Full Name</th>
-                <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-gray-500">Contact Details</th>
-                <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-gray-500">Course</th>
-                <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-gray-500">Location</th>
-                <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-gray-500 text-center">Gender</th>
-                <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-gray-500">Registration (IST)</th>
+                <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-gray-500">Patient Details</th>
+                <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-gray-500">Contact Sync</th>
+                <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-gray-500">Source Platform</th>
+                <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-gray-500">Clinical Indication</th>
+                <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-gray-500 text-center">Triage Urgency</th>
+                <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-gray-500">Received On</th>
                 <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-gray-500 text-right">Actions</th>
               </tr>
             </thead>
@@ -218,49 +281,53 @@ const LeadsPage = () => {
             <tbody className="divide-y divide-gray-200 text-sm">
               {loading ? (
                 <TableSkeleton />
-              ) : filteredLeads.length === 0 ? (
+              ) : paginatedLeads.length === 0 ? (
                 <tr>
                   <td colSpan={7} className="px-6 py-16 text-center">
                     <div className="flex flex-col items-center gap-3 text-gray-400">
                       <FiSearch size={32} />
-                      <p className="font-semibold text-base text-gray-500">No matching leads found</p>
-                      <button onClick={() => setSearch("")} className="text-blue-600 text-sm font-bold hover:underline">Reset Search</button>
+                      <p className="font-semibold text-base text-gray-500">No synchronized platform leads match your filter</p>
+                      <button onClick={() => setSearch("")} className="text-blue-600 text-sm font-bold hover:underline">Reset Search Filters</button>
                     </div>
                   </td>
                 </tr>
               ) : (
-                filteredLeads.map((lead) => (
+                paginatedLeads.map((lead) => (
                   <tr key={lead._id} className="hover:bg-slate-50/60 transition-colors group">
                     <td className="px-6 py-3.5">
                       <div className="flex items-center gap-3">
-                        <div className="w-9 h-9 rounded-full bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center text-white font-black text-xs uppercase shadow-sm shrink-0">
-                          {lead.fullName?.charAt(0) || "U"}
+                        <div className="w-9 h-9 rounded-full bg-gradient-to-tr from-cyan-600 to-blue-600 flex items-center justify-center text-white font-black text-xs uppercase shadow-sm shrink-0">
+                          {lead.fullName?.charAt(0) || "P"}
                         </div>
-                        <span className="font-bold text-gray-900 text-sm truncate max-w-[180px]">{lead.fullName}</span>
+                        <div className="flex flex-col">
+                          <span className="font-bold text-gray-900 text-sm truncate max-w-[150px]">{lead.fullName}</span>
+                          <span className="text-xs font-semibold text-gray-400">{lead.twelfthPercentage} Yrs • {lead.gender}</span>
+                        </div>
                       </div>
                     </td>
                     <td className="px-6 py-3.5">
-                      <div className="flex flex-col max-w-[200px]">
-                        <span className="text-gray-800 font-semibold text-sm truncate">{lead.email}</span>
+                      <div className="flex flex-col max-w-[180px]">
+                        <span className="text-gray-800 font-semibold text-xs truncate">{lead.email}</span>
                         <span className="text-xs text-gray-400 font-mono mt-0.5">{lead.mobileNumber}</span>
                       </div>
                     </td>
                     <td className="px-6 py-3.5">
-                      <span className="px-2.5 py-1 bg-blue-50 text-blue-700 rounded-lg text-xs font-bold border border-blue-100 block w-max truncate max-w-[180px]">
-                        {lead.interestedCourse || lead.course || "—"}
+                      <span className={`px-2.5 py-1 rounded-lg text-xs font-bold border block w-max ${getPlatformBadgeStyle(lead.qualification)}`}>
+                        {lead.qualification}
                       </span>
                     </td>
                     <td className="px-6 py-3.5">
-                      <div className="text-gray-700 max-w-[160px]">
-                        <span className="font-semibold text-sm">{lead.city}</span>
-                        <span className="text-xs text-gray-400 block mt-0.5">{lead.state}</span>
-                      </div>
+                      <span className="text-gray-900 font-semibold text-sm block max-w-[160px] truncate">
+                        {lead.interestedCourse}
+                      </span>
                     </td>
                     <td className="px-6 py-3.5 text-center">
-                      <span className={`text-xs font-bold uppercase px-2.5 py-0.5 rounded-md ${
-                        lead.gender === 'Male' ? 'bg-indigo-50 text-indigo-700' : 'bg-pink-50 text-pink-700'
+                      <span className={`text-[11px] font-bold tracking-tight uppercase px-2.5 py-0.5 rounded-md ${
+                        lead.stream === 'Immediate Priority' ? 'bg-red-100 text-red-800' :
+                        lead.stream === 'Urgent Review' ? 'bg-amber-100 text-amber-800' :
+                        lead.stream === 'Follow-up' ? 'bg-blue-100 text-blue-800' : 'bg-slate-100 text-slate-700'
                       }`}>
-                        {lead.gender || "—"}
+                        {lead.stream}
                       </span>
                     </td>
                     <td className="px-6 py-3.5">
@@ -290,11 +357,11 @@ const LeadsPage = () => {
         </div>
       </div>
 
-      {/* Pagination */}
+      {/* Pagination View */}
       {totalPages > 1 && (
         <div className="flex flex-col sm:flex-row justify-between items-center gap-4 pt-2">
           <p className="text-sm text-gray-500 font-medium">
-            Showing <span className="text-gray-900 font-bold">{filteredLeads.length}</span> of <span className="text-gray-900 font-bold">{total}</span> global leads
+            Showing <span className="text-gray-900 font-bold">{paginatedLeads.length}</span> of <span className="text-gray-900 font-bold">{total}</span> cross-platform inbound inquiries
           </p>
           <div className="flex items-center gap-2">
             <button
@@ -332,15 +399,15 @@ const LeadsPage = () => {
         </div>
       )}
 
-      {/* Lead Detail Drawer */}
+      {/* Deep-Dive Case Assessment Drawer */}
       {selectedLead && (
         <div className="fixed inset-0 z-50 flex justify-end">
           <div className="absolute inset-0 bg-black/30 backdrop-blur-[2px]" onClick={() => setSelectedLead(null)} />
-          <div className="relative w-full max-w-md bg-white h-full shadow-2xl overflow-y-auto flex flex-col animate-in slide-in-from-right duration-250">
+          <div className="relative w-full max-w-md bg-white h-full shadow-2xl overflow-y-auto flex flex-col transition-all duration-300">
             <div className="flex items-center justify-between p-5 border-b sticky top-0 bg-white z-10">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center text-white font-black text-sm">
-                  {selectedLead.fullName?.charAt(0) || "U"}
+                <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-cyan-600 to-blue-600 flex items-center justify-center text-white font-black text-sm">
+                  {selectedLead.fullName?.charAt(0) || "P"}
                 </div>
                 <div>
                   <h2 className="text-base font-bold text-gray-900">{selectedLead.fullName}</h2>
@@ -353,35 +420,29 @@ const LeadsPage = () => {
             </div>
 
             <div className="p-5 space-y-5 text-sm">
-              <Section title="Personal Info">
-                <Field label="Full Name" value={selectedLead.fullName} />
-                {selectedLead.fatherName && <Field label="Father's Name" value={selectedLead.fatherName} />}
+              <Section title="Acquisition Metadata">
+                <Field label="Inbound Channel" value={selectedLead.qualification} />
+                <Field label="Triage Priority" value={selectedLead.stream} />
+                <Field label="Patient Age" value={`${selectedLead.twelfthPercentage} Years`} />
                 <Field label="Gender" value={selectedLead.gender} />
-                {selectedLead.dateOfBirth && (
-                  <Field label="D.O.B" value={new Date(selectedLead.dateOfBirth).toLocaleDateString('en-GB')} />
-                )}
-                {selectedLead.preferredLanguage && <Field label="Language" value={selectedLead.preferredLanguage} />}
               </Section>
 
-              <Section title="Contact Details">
-                <Field label="Email ID" value={selectedLead.email} />
-                <Field label="Mobile No" value={selectedLead.mobileNumber} />
-                <Field label="Address" value={selectedLead.address} />
-                <Field label="City" value={selectedLead.city} />
-                <Field label="State" value={selectedLead.state} />
+              <Section title="Patient Demographics">
+                <Field label="Full Name" value={selectedLead.fullName} />
+                <Field label="Email Address" value={selectedLead.email} />
+                <Field label="Mobile Number" value={selectedLead.mobileNumber} />
+                <Field label="City Location" value={selectedLead.city} />
+                <Field label="State Region" value={selectedLead.state} />
               </Section>
 
-              <Section title="Academic History">
-                <Field label="Target Course" value={selectedLead.interestedCourse || selectedLead.course} />
-                {selectedLead.qualification && <Field label="Highest Qual" value={selectedLead.qualification} />}
-                {selectedLead.stream && <Field label="Stream" value={selectedLead.stream} />}
-                {selectedLead.twelfthPercentage !== undefined && (
-                  <Field label="12th Score" value={`${selectedLead.twelfthPercentage}%`} />
-                )}
+              <Section title="Clinical Parameters">
+                <Field label="Primary Complaint" value={selectedLead.interestedCourse} />
+                <Field label="Preferred Lang" value={selectedLead.preferredLanguage} />
+                <Field label="Intake Verified" value="Yes (OTP Confirmed)" />
               </Section>
 
               {selectedLead.message && (
-                <Section title="Student Message">
+                <Section title="Inbound Form Text & Patient Notes">
                   <p className="text-sm text-gray-700 bg-gray-50 rounded-xl p-3.5 leading-relaxed font-medium">{selectedLead.message}</p>
                 </Section>
               )}
@@ -390,14 +451,14 @@ const LeadsPage = () => {
         </div>
       )}
 
-      {/* Deletion Modal */}
+      {/* Record Deletion Overlay Modal */}
       {deleteModal.open && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-black/40 backdrop-blur-[1px]" onClick={() => setDeleteModal({ open: false, id: "", name: "" })} />
           <div className="relative bg-white rounded-2xl p-6 max-w-md w-full shadow-2xl border border-gray-100 space-y-4 z-10">
             <h3 className="text-base font-bold text-gray-900">Confirm Deletion</h3>
             <p className="text-sm text-gray-500 leading-normal">
-              Are you sure you want to completely clear <span className="font-bold text-gray-900">"{deleteModal.name}"</span> from the systems? This step cannot be reversed.
+              Are you sure you want to dismiss the case request for <span className="font-bold text-gray-900">"{deleteModal.name}"</span>? This will wipe the lead reference from this session layout.
             </p>
             <div className="flex justify-end gap-3 pt-1 text-sm">
               <button
@@ -411,7 +472,7 @@ const LeadsPage = () => {
                 disabled={deleting}
                 className="px-4 py-2 font-bold text-white bg-red-600 hover:bg-red-700 rounded-xl transition-colors disabled:opacity-40"
               >
-                {deleting ? "Deleting..." : "Confirm Delete"}
+                {deleting ? "Purging Case..." : "Confirm Dismissal"}
               </button>
             </div>
           </div>
